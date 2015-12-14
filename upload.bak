@@ -20,20 +20,20 @@ except:
 
 
 vault = 'BaculaTest001'
-print v
 dbconn = "dbname='bacula' user='bacula' password='bacula' host='localhost'"
-for row in v:
-	file = storage+'/'+row[0]
-	print file
-	try:
-		u = glacier.upload_glacier.delay(file,vault,file)
-		print u
-		conn=psycopg2.connect(dbconn)
-		cur = conn.cursor()
-		SQL="""UPDATE media SET comment='{"celery_id": "%(cid)s"}' WHERE volumename='%(vol)s'""" % {'cid': u.id, 'vol': row[0]}
-		cur.execute(SQL)
-		conn.commit()
-		conn.close()	
-	except:
-		raise
-		#print "Upload failed"
+while v.ready() == False:
+	time.sleep(2)
+else:
+	for row in v.result:
+		file = storage+'/'+row[0]
+		try:
+			u = glacier.upload_glacier.delay(file,vault,file)
+			conn=psycopg2.connect(dbconn)
+			cur = conn.cursor()
+			SQL="""UPDATE media SET comment='{"celery_id": "%(cid)s"}' WHERE volumename='%(vol)s'""" % {'cid': u.id, 'vol': row[0]}
+			cur.execute(SQL)
+			conn.commit()
+			conn.close()	
+		except:
+			raise
+			#print "Upload failed"

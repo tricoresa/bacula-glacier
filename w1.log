@@ -61,3 +61,91 @@ Trying again in 4.00 seconds...
 [2015-12-10 23:31:09,477: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [Errno 111] Connection refused.
 Trying again in 6.00 seconds...
 
+[2015-12-11 11:44:33,271: WARNING/MainProcess] /u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/apps/worker.py:161: CDeprecationWarning: 
+Starting from version 3.2 Celery will refuse to accept pickle by default.
+
+The pickle serializer is a security concern as it may give attackers
+the ability to execute any command.  It's important to secure
+your broker from unauthorized access when using pickle, so we think
+that enabling pickle should require a deliberate action and not be
+the default choice.
+
+If you depend on pickle then you should set a setting to disable this
+warning and to be sure that everything will continue working
+when you upgrade to Celery 3.2::
+
+    CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
+
+You must only enable the serializers that you will actually use.
+
+
+  warnings.warn(CDeprecationWarning(W_PICKLE_DEPRECATED))
+[2015-12-11 11:44:33,284: INFO/MainProcess] Connected to amqp://guest:**@127.0.0.1:5672//
+[2015-12-11 11:44:33,298: INFO/MainProcess] mingle: searching for neighbors
+[2015-12-11 11:44:34,305: INFO/MainProcess] mingle: all alone
+[2015-12-11 11:44:34,328: WARNING/MainProcess] w1@ckerns-rhel6.novalocal ready.
+[2015-12-11 11:44:46,345: INFO/MainProcess] Received task: glacier.get_vols[2b2e30ea-8d6e-4ead-93a5-a64dca554c74]
+[2015-12-11 11:44:46,400: INFO/MainProcess] Task glacier.get_vols[2b2e30ea-8d6e-4ead-93a5-a64dca554c74] succeeded in 0.051553158999s: [('glacier-1_FullVol16',)]
+[2015-12-11 11:44:46,409: INFO/MainProcess] Received task: glacier.upload_glacier[4e673075-d81b-48e0-8b3b-abc47d8e99f8]
+[2015-12-11 11:44:46,468: INFO/Worker-1] Found credentials in shared credentials file: ~/.aws/credentials
+[2015-12-11 11:44:46,876: ERROR/MainProcess] Task glacier.upload_glacier[4e673075-d81b-48e0-8b3b-abc47d8e99f8] raised unexpected: IOError(2, 'No such file or directory')
+Traceback (most recent call last):
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/app/trace.py", line 240, in trace_task
+    R = retval = fun(*args, **kwargs)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/app/trace.py", line 438, in __protected_call__
+    return self.run(*args, **kwargs)
+  File "/u01/bacula-glacier/glacier.py", line 29, in upload_glacier
+    with open(filename, 'rb') as f:
+IOError: [Errno 2] No such file or directory: '/storage/sd00/glacier-1/fsglacier-1_FullVol16'
+[2015-12-11 12:04:20,465: INFO/MainProcess] Received task: glacier.get_vols[f648668f-0cb7-4546-8805-fbd9c861128d]
+[2015-12-11 12:04:20,475: INFO/MainProcess] Task glacier.get_vols[f648668f-0cb7-4546-8805-fbd9c861128d] succeeded in 0.00952987100027s: [('glacier-2_FullVol17',)]
+[2015-12-11 12:04:20,483: INFO/MainProcess] Received task: glacier.upload_glacier[f91e6446-56d2-4136-abff-e23de0dce7e1]
+[2015-12-11 12:04:20,513: ERROR/MainProcess] Task glacier.upload_glacier[f91e6446-56d2-4136-abff-e23de0dce7e1] raised unexpected: IOError(2, 'No such file or directory')
+Traceback (most recent call last):
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/app/trace.py", line 240, in trace_task
+    R = retval = fun(*args, **kwargs)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/app/trace.py", line 438, in __protected_call__
+    return self.run(*args, **kwargs)
+  File "/u01/bacula-glacier/glacier.py", line 29, in upload_glacier
+    with open(filename, 'rb') as f:
+IOError: [Errno 2] No such file or directory: '/storage/sd00/glacier-1/fsglacier-2_FullVol17'
+[2015-12-11 12:04:45,953: INFO/MainProcess] Received task: glacier.get_vols[6002fdf5-e472-40ba-846c-c567c7905ef3]
+[2015-12-11 12:04:45,963: INFO/MainProcess] Task glacier.get_vols[6002fdf5-e472-40ba-846c-c567c7905ef3] succeeded in 0.00866487700114s: [('glacier-2_FullVol17',)]
+[2015-12-11 12:04:45,970: INFO/MainProcess] Received task: glacier.upload_glacier[5550a3a3-1bb1-4cc2-832b-771c4e1916b1]
+[2015-12-11 12:04:46,002: ERROR/MainProcess] Task glacier.upload_glacier[5550a3a3-1bb1-4cc2-832b-771c4e1916b1] raised unexpected: IOError(2, 'No such file or directory')
+Traceback (most recent call last):
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/app/trace.py", line 240, in trace_task
+    R = retval = fun(*args, **kwargs)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/app/trace.py", line 438, in __protected_call__
+    return self.run(*args, **kwargs)
+  File "/u01/bacula-glacier/glacier.py", line 29, in upload_glacier
+    with open(filename, 'rb') as f:
+IOError: [Errno 2] No such file or directory: '/storage/sd00/glacier-1/fs/glacier-2_FullVol17'
+[2015-12-11 12:05:21,465: INFO/MainProcess] Received task: glacier.get_vols[8e413e45-fc8c-4c66-a28e-a92c0d797ff8]
+[2015-12-11 12:05:21,474: INFO/MainProcess] Task glacier.get_vols[8e413e45-fc8c-4c66-a28e-a92c0d797ff8] succeeded in 0.00890199800051s: [('glacier-1_FullVol16',)]
+[2015-12-11 12:05:21,481: INFO/MainProcess] Received task: glacier.upload_glacier[d0c5ea73-f226-47ea-8707-99210a36e23b]
+[2015-12-11 12:06:56,268: INFO/MainProcess] Received task: glacier.get_vols[0891eb25-0f7b-4cc7-bf12-95bedbf10efd]
+[2015-12-11 12:30:11,779: INFO/MainProcess] Received task: glacier.get_vols[63fda128-1711-4a87-900c-750d4e4c2b97]
+[2015-12-11 12:48:33,406: INFO/MainProcess] Received task: glacier.get_vols[d1b7f7b6-d8c0-4d88-887f-ab7e0ac00bd9]
+[2015-12-11 12:59:52,680: INFO/MainProcess] Received task: glacier.get_vols[4fc7b17c-5574-411f-8800-96ce05436b17]
+[2015-12-11 13:11:42,138: INFO/MainProcess] sync with w2@ckerns-rhel6.novalocal
+[2015-12-11 13:11:46,404: INFO/MainProcess] sync with w3@ckerns-rhel6.novalocal
+[2015-12-11 13:11:50,448: INFO/MainProcess] sync with w4@ckerns-rhel6.novalocal
+[2015-12-11 13:29:07,699: INFO/Worker-1] Starting new HTTPS connection (1): glacier.us-east-1.amazonaws.com
+[2015-12-11 14:30:58,743: ERROR/MainProcess] Task glacier.upload_glacier[d0c5ea73-f226-47ea-8707-99210a36e23b] raised unexpected: ClientError('An error occurred (InvalidParameterValueException) when calling the UploadArchive operation: Invalid Content-Length: 95157537932',)
+Traceback (most recent call last):
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/app/trace.py", line 240, in trace_task
+    R = retval = fun(*args, **kwargs)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/app/trace.py", line 438, in __protected_call__
+    return self.run(*args, **kwargs)
+  File "/u01/bacula-glacier/glacier.py", line 30, in upload_glacier
+    upload_arc = glacier_conn.upload_archive(vaultName=vault, archiveDescription=description, body=f)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/botocore/client.py", line 310, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/botocore/client.py", line 396, in _make_api_call
+    raise ClientError(parsed_response, operation_name)
+ClientError: An error occurred (InvalidParameterValueException) when calling the UploadArchive operation: Invalid Content-Length: 95157537932
+[2015-12-11 14:30:58,756: INFO/MainProcess] Task glacier.get_vols[0891eb25-0f7b-4cc7-bf12-95bedbf10efd] succeeded in 0.0117415799978s: [('glacier-2_FullVol17',)]
+[2015-12-11 14:30:58,768: INFO/MainProcess] Task glacier.get_vols[63fda128-1711-4a87-900c-750d4e4c2b97] succeeded in 0.0105549520013s: [('glacier-2_FullVol17',)]
+[2015-12-11 14:30:58,780: INFO/MainProcess] Task glacier.get_vols[d1b7f7b6-d8c0-4d88-887f-ab7e0ac00bd9] succeeded in 0.0105542129968s: [('glacier-2_FullVol17',)]
+[2015-12-11 14:30:58,792: INFO/MainProcess] Task glacier.get_vols[4fc7b17c-5574-411f-8800-96ce05436b17] succeeded in 0.0105246149978s: [('glacier-2_FullVol17',)]
