@@ -149,3 +149,6 @@ ClientError: An error occurred (InvalidParameterValueException) when calling the
 [2015-12-11 14:30:58,768: INFO/MainProcess] Task glacier.get_vols[63fda128-1711-4a87-900c-750d4e4c2b97] succeeded in 0.0105549520013s: [('glacier-2_FullVol17',)]
 [2015-12-11 14:30:58,780: INFO/MainProcess] Task glacier.get_vols[d1b7f7b6-d8c0-4d88-887f-ab7e0ac00bd9] succeeded in 0.0105542129968s: [('glacier-2_FullVol17',)]
 [2015-12-11 14:30:58,792: INFO/MainProcess] Task glacier.get_vols[4fc7b17c-5574-411f-8800-96ce05436b17] succeeded in 0.0105246149978s: [('glacier-2_FullVol17',)]
+[2015-12-14 20:00:07,355: INFO/MainProcess] Received task: glacier.upload_glacier[8fe50d0b-0c3b-4e96-b40b-71c8b4faecfb]
+[2015-12-14 20:00:07,382: INFO/Worker-1] Starting new HTTPS connection (1): glacier.us-east-1.amazonaws.com
+[2015-12-14 20:00:07,789: INFO/MainProcess] Task glacier.upload_glacier[8fe50d0b-0c3b-4e96-b40b-71c8b4faecfb] succeeded in 0.416312150017s: {u'archiveId':...

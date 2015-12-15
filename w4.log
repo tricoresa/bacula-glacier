@@ -22,3 +22,7 @@ You must only enable the serializers that you will actually use.
 [2015-12-11 13:11:51,464: INFO/MainProcess] mingle: sync with 3 nodes
 [2015-12-11 13:11:51,465: INFO/MainProcess] mingle: sync complete
 [2015-12-11 13:11:51,499: WARNING/MainProcess] w4@ckerns-rhel6.novalocal ready.
+[2015-12-14 20:00:04,273: INFO/MainProcess] Received task: glacier.upload_glacier[8ba64b96-a631-4754-a78b-b73e72052344]
+[2015-12-14 20:00:04,323: INFO/Worker-1] Found credentials in shared credentials file: ~/.aws/credentials
+[2015-12-14 20:00:04,740: INFO/Worker-1] Starting new HTTPS connection (1): glacier.us-east-1.amazonaws.com
+[2015-12-14 20:00:05,388: INFO/MainProcess] Task glacier.upload_glacier[8ba64b96-a631-4754-a78b-b73e72052344] succeeded in 1.07324302295s: {u'archiveId':...

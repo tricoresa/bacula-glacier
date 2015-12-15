@@ -72,3 +72,6 @@ Traceback (most recent call last):
   File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/botocore/client.py", line 396, in _make_api_call
     raise ClientError(parsed_response, operation_name)
 ClientError: An error occurred (InvalidParameterValueException) when calling the UploadArchive operation: Invalid Content-Length: 95147241500
+[2015-12-14 20:00:04,270: INFO/MainProcess] Received task: glacier.upload_glacier[a4767125-0dec-4d3f-9d2f-15cd69831503]
+[2015-12-14 20:00:04,441: INFO/Worker-1] Starting new HTTPS connection (1): glacier.us-east-1.amazonaws.com
+[2015-12-14 20:00:05,372: INFO/MainProcess] Task glacier.upload_glacier[a4767125-0dec-4d3f-9d2f-15cd69831503] succeeded in 1.080158722s: {u'archiveId':...

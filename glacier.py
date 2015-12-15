@@ -30,3 +30,29 @@ def upload_glacier(filename, vault, description):
 		upload_arc = glacier_conn.upload_archive(vaultName=vault, archiveDescription=description, body=f)
 	return upload_arc
 
+
+def upload_multi_init(filename, vault, chunksize):
+	g = boto3.client('glacier')
+	try:
+		r = g.initiate_multipart_upload(vaultName=vault,archiveDescription=filename,partSize=chunksize)
+	except:
+		raise
+	return r['uploadId']
+
+
+def upload_part(vault,uid,range,body):
+	g = boto3.client('glacier')
+	try:
+		r = g.upload_multipart_part(vaultName=vault,uploadId=uid,range=range,body=body)
+	except:
+		raise
+	return r
+
+def complete_multi(vault,uid,size,tree):
+	g = boto3.client('glacier')
+	try:
+		r = g.complete_multipart_upload(vaultName=vault,uploadId=uid,archiveSize=size,checksum=tree)
+	except: 
+		raise
+	return r
+	
