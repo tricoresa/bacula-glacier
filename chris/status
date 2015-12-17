@@ -1,0 +1,5 @@
+imulti_id_init response 
+upload_part, 201 or failed
+check for failures
+if complete fails, action complte + json failure.
+

@@ -3,7 +3,7 @@ fname = '/storage/sd00/ckerns-rhel6/fs/ckerns-rhel6_DiffVol8'
 chunksize = 8388608
 r = 0
 fsize = os.stat(fname).st_size
-vid = 'y-FwnC7dhXVHYY2safxK1f3ZEtJ79aHLVOwmztFk18yJ_h9xRHufrJ5isH4Z6f7vCxzzvs9VLzsNzEdfrX1hBhdS_K_X'
+vid = 'NLjKaw4V7QCxN2umM0Y4wqn5MFo7ZscWPKGt6I8nwNh6VMcgtAoCAejLxCKeSOCMkilWOJabVuutc1QQMvL6zkgHwqu3'
 
 with open (fname, 'rb') as f:
     for chunk in iter(lambda: f.read(int(chunksize)), b''):
@@ -11,6 +11,6 @@ with open (fname, 'rb') as f:
             incr = fsize - r
         else:
             incr = chunksize
-        glacier.upload_part('BaculaTest001',vid, range="bytes " + str(r) + "-" + str(r + int(incr) - 1) + "/*",body=chunk)
+        up = glacier.upload_part('BaculaTest001',vid, range="bytes " + str(r) + "-" + str(r + int(incr) - 1) + "/*",body=chunk)
         r = r + chunksize
-
+	print up

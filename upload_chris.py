@@ -4,8 +4,6 @@ import glacier
 import time
 import psycopg2
 import os
-import hashlib
-import json
 from treehash import TreeHash
 
 parser = argparse.ArgumentParser()
@@ -28,50 +26,29 @@ dbconn = "dbname='bacula' user='bacula' password='bacula' host='localhost'"
 chunksize = 8388608
 for row in v:
 	fname = storage+'/'+row[0]
-	fsize = os.stat(fname).st_size
-	treehash = TreeHash(algo=hashlib.sha256)
-	treehash.update(open(fname, "rb").read())
-	thash = treehash.hexdigest()
+	fsize = os.stat(fname).st_stat
 	if fsize > chunksize:
 		r = 0
-		try:
-			init_multi = glacier.upload_multi_init(fname,vault,str(chunksize))
-		except:
-			raise
-		p = 1
+		init_multi = glacier.upload_multi_init(fname,vault,chunksize)
 		with open (fname, 'rb') as f:
-			status = {}
-			status['failures'] = {}
  			for chunk in iter(lambda: f.read(chunksize), b''):
-				part = "part_"+str(p)	
 				if r + chunksize > fsize:
 					incr = fsize -r
 				else:
 					incr = chunksize
-				try:
-					up = glacier.upload_part(vault,init_multi,"bytes " + str(r) + "-" + str(str(r + int(incr) -1)) + "/*",body=chunk)
-				except:
-					raise
-
+				up = glacier.upload_part(vault,init_multi,"bytes " + str(r) + "-" + str(str(r + int(incr) -1) + "/*",body=chunk)
 				r = r + chunksize
-				p = p + 1
-				if up['ResponseMetadata']['HTTPStatusCode'] != 204:
-					status['failures'][part] = '%(start)s-%(end)s' % {'start': r, 'end': r+incr}
+					
 				
-		try:
-			com = glacier.complete_multi(vault,init_multi,str(fsize),thash)# complete multipart upload
-			if com['ResponseMetadata']['HTTPStatusCode'] == 201:
-				status['glacier_data'] = com
-		except:
-			raise
-		s =  json.dumps(status)
-		SQL = """UPDATE media SET comment='%(status)s' WHERE volumename='%(vol)s'""" % {'status': s, 'vol': row[0]}
-		glacier.update_db(SQL, 'update')
-
+		# complete multipart upload
 	else:
 		try:
 			u = glacier.upload_glacier.delay(fname,vault,fname)
+			conn=psycopg2.connect(dbconn)
+			cur = conn.cursor()
 			SQL="""UPDATE media SET comment='{"celery_id": "%(cid)s"}' WHERE volumename='%(vol)s'""" % {'cid': u.id, 'vol': row[0]}
-			glacier.update_db(SQL, 'update')
+			cur.execute(SQL)
+			conn.commit()
+			conn.close()	
 		except:
 			raise

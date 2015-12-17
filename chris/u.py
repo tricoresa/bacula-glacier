@@ -5,7 +5,6 @@ import time
 import psycopg2
 import os
 import hashlib
-import json
 from treehash import TreeHash
 
 parser = argparse.ArgumentParser()
@@ -40,8 +39,6 @@ for row in v:
 			raise
 		p = 1
 		with open (fname, 'rb') as f:
-			status = {}
-			status['failures'] = {}
  			for chunk in iter(lambda: f.read(chunksize), b''):
 				part = "part_"+str(p)	
 				if r + chunksize > fsize:
@@ -52,26 +49,23 @@ for row in v:
 					up = glacier.upload_part(vault,init_multi,"bytes " + str(r) + "-" + str(str(r + int(incr) -1)) + "/*",body=chunk)
 				except:
 					raise
-
 				r = r + chunksize
 				p = p + 1
-				if up['ResponseMetadata']['HTTPStatusCode'] != 204:
-					status['failures'][part] = '%(start)s-%(end)s' % {'start': r, 'end': r+incr}
+				print up
 				
 		try:
-			com = glacier.complete_multi(vault,init_multi,str(fsize),thash)# complete multipart upload
-			if com['ResponseMetadata']['HTTPStatusCode'] == 201:
-				status['glacier_data'] = com
+			com = glacier.complete_multi(vault,init_multi,fsize,thash)# complete multipart upload
 		except:
 			raise
-		s =  json.dumps(status)
-		SQL = """UPDATE media SET comment='%(status)s' WHERE volumename='%(vol)s'""" % {'status': s, 'vol': row[0]}
-		glacier.update_db(SQL, 'update')
 
 	else:
 		try:
 			u = glacier.upload_glacier.delay(fname,vault,fname)
+			conn=psycopg2.connect(dbconn)
+			cur = conn.cursor()
 			SQL="""UPDATE media SET comment='{"celery_id": "%(cid)s"}' WHERE volumename='%(vol)s'""" % {'cid': u.id, 'vol': row[0]}
-			glacier.update_db(SQL, 'update')
+			cur.execute(SQL)
+			conn.commit()
+			conn.close()	
 		except:
 			raise
