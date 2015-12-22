@@ -1,4 +1,4 @@
-[2015-12-11 13:11:46,335: WARNING/MainProcess] /u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/apps/worker.py:161: CDeprecationWarning: 
+[2015-12-18 12:22:13,917: WARNING/MainProcess] /u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/apps/worker.py:161: CDeprecationWarning: 
 Starting from version 3.2 Celery will refuse to accept pickle by default.
 
 The pickle serializer is a security concern as it may give attackers
@@ -17,19 +17,28 @@ You must only enable the serializers that you will actually use.
 
 
   warnings.warn(CDeprecationWarning(W_PICKLE_DEPRECATED))
-[2015-12-11 13:11:46,360: INFO/MainProcess] Connected to amqp://guest:**@127.0.0.1:5672//
-[2015-12-11 13:11:46,393: INFO/MainProcess] mingle: searching for neighbors
-[2015-12-11 13:11:47,418: INFO/MainProcess] mingle: sync with 2 nodes
-[2015-12-11 13:11:47,419: INFO/MainProcess] mingle: sync complete
-[2015-12-11 13:11:47,454: WARNING/MainProcess] w3@ckerns-rhel6.novalocal ready.
-[2015-12-11 13:11:50,450: INFO/MainProcess] sync with w4@ckerns-rhel6.novalocal
-[2015-12-14 20:00:04,272: INFO/MainProcess] Received task: glacier.upload_glacier[70063195-4a84-4229-acf4-a1d9f1be0377]
-[2015-12-14 20:00:04,312: INFO/Worker-1] Found credentials in shared credentials file: ~/.aws/credentials
-[2015-12-14 20:00:04,772: INFO/Worker-1] Starting new HTTPS connection (1): glacier.us-east-1.amazonaws.com
-[2015-12-14 20:00:05,534: INFO/MainProcess] Task glacier.upload_glacier[70063195-4a84-4229-acf4-a1d9f1be0377] succeeded in 1.22970659204s: {u'archiveId':...
-[2015-12-15 12:19:40,079: INFO/MainProcess] sync with w1@ckerns-rhel6.novalocal
-[2015-12-15 12:27:45,734: INFO/MainProcess] sync with celery@ckerns-rhel6.novalocal
-[2015-12-15 12:29:30,020: WARNING/MainProcess] /u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/apps/worker.py:161: CDeprecationWarning: 
+[2015-12-18 12:22:13,929: INFO/MainProcess] Connected to amqp://guest:**@127.0.0.1:5672//
+[2015-12-18 12:22:13,941: INFO/MainProcess] mingle: searching for neighbors
+[2015-12-18 12:22:14,952: INFO/MainProcess] mingle: sync with 2 nodes
+[2015-12-18 12:22:14,953: INFO/MainProcess] mingle: sync complete
+[2015-12-18 12:22:14,981: WARNING/MainProcess] w3@ckerns-rhel6.novalocal ready.
+[2015-12-18 12:22:15,200: INFO/MainProcess] Events of group {task} enabled by remote.
+[2015-12-18 12:22:17,483: INFO/MainProcess] sync with w4@ckerns-rhel6.novalocal
+[2015-12-18 12:25:33,281: INFO/MainProcess] Received task: glacier.hash_file[ffb53af0-2810-4022-bde5-2d08d37a4776]
+[2015-12-18 12:25:33,477: INFO/MainProcess] Task glacier.hash_file[ffb53af0-2810-4022-bde5-2d08d37a4776] succeeded in 0.170251313946s: 'a0784d98b04e3ae7169d2775bab3dbc1b7ea8fb28780cc8ae9cddcb1868055f0'
+[2015-12-18 12:27:35,900: INFO/MainProcess] Received task: glacier.hash_file[9e6dac19-d1db-48c4-8951-03981dcaef91]
+[2015-12-18 12:27:35,902: INFO/MainProcess] Received task: glacier.hash_file[0d0acc82-3808-4c6b-84d2-683a2b566196]
+[2015-12-18 12:27:38,221: INFO/MainProcess] Task glacier.hash_file[9e6dac19-d1db-48c4-8951-03981dcaef91] succeeded in 2.31688922702s: '06b14d3c35fedee8894d98be1254927196a29f7e248e4b0a95d5d3bb19bca1ea'
+[2015-12-18 12:27:38,299: ERROR/MainProcess] Task glacier.hash_file[0d0acc82-3808-4c6b-84d2-683a2b566196] raised unexpected: MemoryError()
+Traceback (most recent call last):
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/app/trace.py", line 240, in trace_task
+    R = retval = fun(*args, **kwargs)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/app/trace.py", line 438, in __protected_call__
+    return self.run(*args, **kwargs)
+  File "/u01/bacula-glacier/glacier.py", line 24, in hash_file
+    treehash.update(open(fname, "rb").read())
+MemoryError
+[2015-12-18 12:51:16,933: WARNING/MainProcess] /u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/apps/worker.py:161: CDeprecationWarning: 
 Starting from version 3.2 Celery will refuse to accept pickle by default.
 
 The pickle serializer is a security concern as it may give attackers
@@ -48,11 +57,64 @@ You must only enable the serializers that you will actually use.
 
 
   warnings.warn(CDeprecationWarning(W_PICKLE_DEPRECATED))
-[2015-12-15 12:29:30,032: INFO/MainProcess] Connected to amqp://guest:**@127.0.0.1:5672//
-[2015-12-15 12:29:30,045: INFO/MainProcess] mingle: searching for neighbors
-[2015-12-15 12:29:31,056: INFO/MainProcess] mingle: sync with 2 nodes
-[2015-12-15 12:29:31,057: INFO/MainProcess] mingle: sync complete
-[2015-12-15 12:29:31,105: WARNING/MainProcess] w3@ckerns-rhel6.novalocal ready.
-[2015-12-15 12:29:42,236: INFO/MainProcess] sync with w4@ckerns-rhel6.novalocal
-[2015-12-15 12:29:53,048: INFO/MainProcess] sync with w5@ckerns-rhel6.novalocal
-[2015-12-15 15:35:53,757: INFO/MainProcess] Events of group {task} enabled by remote.
+[2015-12-18 12:51:17,997: WARNING/MainProcess] w3@ckerns-rhel6.novalocal ready.
+[2015-12-21 11:05:47,458: WARNING/MainProcess] consumer: Connection to broker lost. Trying to re-establish the connection...
+Traceback (most recent call last):
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/worker/consumer.py", line 278, in start
+    blueprint.start(self)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/bootsteps.py", line 123, in start
+    step.start(parent)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/worker/consumer.py", line 821, in start
+    c.loop(*c.loop_args())
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/worker/loops.py", line 76, in asynloop
+    next(loop)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/kombu/async/hub.py", line 345, in create_loop
+    cb(*cbargs)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/kombu/transport/base.py", line 164, in on_readable
+    reader(loop)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/kombu/transport/base.py", line 146, in _read
+    drain_events(timeout=0)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/amqp/connection.py", line 324, in drain_events
+    return amqp_method(channel, args)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/amqp/connection.py", line 527, in _close
+    self._x_close_ok()
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/amqp/connection.py", line 555, in _x_close_ok
+    self._send_method((10, 51))
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/amqp/abstract_channel.py", line 56, in _send_method
+    self.channel_id, method_sig, args, content,
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/amqp/method_framing.py", line 221, in write_method
+    write_frame(1, channel, payload)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/amqp/transport.py", line 182, in write_frame
+    frame_type, channel, size, payload, 0xce,
+  File "/opt/rh/python27/root/usr/lib64/python2.7/socket.py", line 224, in meth
+    return getattr(self._sock,name)(*args)
+error: [Errno 104] Connection reset by peer
+[2015-12-21 11:05:47,724: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [Errno 111] Connection refused.
+Trying again in 2.00 seconds...
+
+[2015-12-21 11:05:49,767: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [Errno 111] Connection refused.
+Trying again in 4.00 seconds...
+
+[2015-12-21 11:05:53,821: ERROR/MainProcess] consumer: Cannot connect to amqp://guest:**@127.0.0.1:5672//: [Errno 111] Connection refused.
+Trying again in 6.00 seconds...
+
+[2015-12-22 15:15:31,651: WARNING/MainProcess] /u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/apps/worker.py:161: CDeprecationWarning: 
+Starting from version 3.2 Celery will refuse to accept pickle by default.
+
+The pickle serializer is a security concern as it may give attackers
+the ability to execute any command.  It's important to secure
+your broker from unauthorized access when using pickle, so we think
+that enabling pickle should require a deliberate action and not be
+the default choice.
+
+If you depend on pickle then you should set a setting to disable this
+warning and to be sure that everything will continue working
+when you upgrade to Celery 3.2::
+
+    CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
+
+You must only enable the serializers that you will actually use.
+
+
+  warnings.warn(CDeprecationWarning(W_PICKLE_DEPRECATED))
+[2015-12-22 15:15:32,764: WARNING/MainProcess] w3@ckerns-rhel6.novalocal ready.

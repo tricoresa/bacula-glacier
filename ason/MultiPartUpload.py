@@ -9,6 +9,7 @@ from treehash import TreeHash
 
 # Global Variables
 min_chunk_size = 1048576
+hash_chunks = 1024 ** 2
 
 
 # Main loop
@@ -20,16 +21,21 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", help="File to upload", required=True)
     parser.add_argument("--size", help="Chunk size in bytes", required=True)
-    parser.add_argument("--account", help="Account ID", required=True)
+    parser.add_argument("--account", help="Account ID", default="-")
     parser.add_argument("--vault", help="Vault Name", required=True)
     args = parser.parse_args()
 
     in_file = open(args.file, "rb")
     in_file_size = os.path.getsize(args.file)
-    in_file_sha256 = hashlib.sha256(open(args.file, "rb").read()).hexdigest()
+    #in_file_sha256 = hashlib.sha256(open(args.file, "rb").read()).hexdigest()
 
     treehash = TreeHash(algo=hashlib.sha256)
-    treehash.update(open(args.file, "rb").read())
+    with open(args.file, "rb") as treehash_input:
+        while True:
+            data = treehash_input.read(hash_chunks)
+            treehash.update(data)
+            if len(data) < hash_chunks:
+                break
     in_file_tree_sha256 = treehash.hexdigest()
 
     chunk_size = int(args.size)
@@ -42,7 +48,7 @@ def main():
     #
 
     multiupload_request = client.initiate_multipart_upload(
-        vaultName="TestVault",
+        vaultName=args.vault,
         archiveDescription=args.file,
         partSize=str(chunk_size)
     )
@@ -51,7 +57,7 @@ def main():
 
     print("MultiUpload ID: " + multiupload_request['uploadId'])
     print("Size: " + str(in_file_size))
-    print("Hash: " + in_file_sha256)
+    #print("Hash: " + in_file_sha256)
     print("Tree Hash: " + in_file_tree_sha256)
 
     position = 0

@@ -3,18 +3,23 @@ __author__ = 'matt'
 import boto3
 import psycopg2
 from celery import Celery
+from treehash import TreeHash
+import hashlib
 
-app = Celery('tasks', backend='amqp', broker='amqp://guest@localhost//')
+app = Celery('tasks', backend='amqp', broker='amqp://guest@localhost')
 app.conf.update( 
     CELERY_ROUTES = { 
-        'bacula-glacier.glacier.get_vols': {'queue': 'database'},
-	'bacula-glacier.glacier.upload_glacier': {'queue': 'single-up'},
-	'bacula-glacier.glacier.upload_multi_init': {'queue': 'multi-init'},
-	'bacula-glacier.glacier.upload_part': {'queue': 'up-part'},
-	'bacula-glacier.glacier.complete_multi': {'queue': 'multi-complete'},
-
+	'bacula-glacier.glacier.upload_glacier': {'queue': 'upload'},
+	'bacula-glacier.glacier.upload_part': {'queue': 'upload'},
+	'bacula-glacier.glacier.hash_file': {'queue': 'hashtree'},
     },
 )
+
+@app.task
+def hash_file(fname):
+        treehash = TreeHash(algo=hashlib.sha256)
+        treehash.update(open(fname, "rb").read())
+	return treehash.hexdigest()
 
 @app.task
 def get_vols(jobid):
@@ -58,15 +63,15 @@ def upload_part(vault,uid,range,body):
 	return r
 
 @app.task
-def complete_multi(vault,uid,size,tree):
+def complete_multi(vault,uid,size,check):
 	g = boto3.client('glacier')
 	try:
-		r = g.complete_multipart_upload(vaultName=vault,uploadId=uid,archiveSize=size,checksum=tree)
+		r = g.complete_multipart_upload(vaultName=vault,uploadId=uid,archiveSize=size,checksum=check)
 	except: 
 		raise
 	return r
 	
-
+@app.task
 def update_db(SQL, query):
         dbconn = "dbname='bacula' user='bacula' password='bacula' host='localhost'"
         conn=psycopg2.connect(dbconn)

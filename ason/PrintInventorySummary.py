@@ -8,6 +8,8 @@ import sys
 # GLobal Vars
 
 inventory_json = None
+HTTPSuccessLow = 200
+HTTPSuccessHigh = 226
 
 # Main loop
 
@@ -16,11 +18,16 @@ def main():
     # Parse command line options
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", help="File containing inventory data. If this is specified --vault and --jobid are ignored")
+    parser.add_argument("--account", help="Account ID")
     parser.add_argument("--vault", help="Vault Name")
     parser.add_argument("--jobid", help="Inventory Job ID")
     parser.add_argument("--details", help="Print Inventory details", action="store_true")
     args = parser.parse_args()
 
+    if args.account:
+        account = args.account
+    else:
+        account = "-"
 
     if args.file:
         with open(args.file) as input_file:
@@ -31,7 +38,7 @@ def main():
         if args.vault and args.jobid:
             glacier = boto3.resource('glacier')
             job = glacier.Job(
-                account_id = "-",
+                account_id=account,
                 vault_name=args.vault,
                 id=args.jobid
             )
@@ -39,10 +46,10 @@ def main():
             if job.action == "InventoryRetrieval":
                 if job.status_code == "Succeeded":
                     response = job.get_output()
-                    if response['status'] == 200:
+                    if HTTPSuccessLow <= response['status'] <= HTTPSuccessHigh:
                         inventory_json = json.loads(str(response['body'].read()))
                     else:
-                        print("Was unsuccessful retrieving job output for Job ID " + args.jobid + ". Please try again.")
+                        print("HTTP Return code " + str(response['status']) + " indicates unsuccessful retrieval of job output for Job ID " + args.jobid + ". Please try again.")
                         sys.exit(1)
                 else:
                   print("Job's status is " + str(job.status_code) + " for Job ID " + args.jobid + ". Exiting.")

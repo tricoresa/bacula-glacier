@@ -4,7 +4,8 @@ import glacier
 import time
 import psycopg2
 import os
-import hashlib
+import json
+#import hashlib
 from treehash import TreeHash
 
 parser = argparse.ArgumentParser()
@@ -28,9 +29,9 @@ chunksize = 8388608
 for row in v:
 	fname = storage+'/'+row[0]
 	fsize = os.stat(fname).st_size
-	treehash = TreeHash(algo=hashlib.sha256)
-	treehash.update(open(fname, "rb").read())
-	thash = treehash.hexdigest()
+	#treehash = TreeHash(algo=hashlib.sha256)
+	#treehash.update(open(fname, "rb").read())
+	#thash = treehash.hexdigest()
 	if fsize > chunksize:
 		r = 0
 		try:
@@ -39,6 +40,8 @@ for row in v:
 			raise
 		p = 1
 		with open (fname, 'rb') as f:
+			status = {}
+			status['file_loc'] = fname
  			for chunk in iter(lambda: f.read(chunksize), b''):
 				part = "part_"+str(p)	
 				if r + chunksize > fsize:
@@ -49,23 +52,27 @@ for row in v:
 					up = glacier.upload_part(vault,init_multi,"bytes " + str(r) + "-" + str(str(r + int(incr) -1)) + "/*",body=chunk)
 				except:
 					raise
+
 				r = r + chunksize
 				p = p + 1
-				print up
+				if up['ResponseMetadata']['HTTPStatusCode'] != 204:
+					status['failures'][part] = '%(start)s-%(end)s' % {'start': r, 'end': r+incr}
 				
 		try:
-			com = glacier.complete_multi(vault,init_multi,fsize,thash)# complete multipart upload
+			com = glacier.complete_multi(vault,init_multi,str(fsize))# complete multipart upload
+			if com['ResponseMetadata']['HTTPStatusCode'] == 201:
+				status['glacier_data'] = {'archiveId': com['archiveId'], 'checksum': com['checksum']}
 		except:
 			raise
+
+		s =  json.dumps(status)
+		SQL = """UPDATE media SET comment='%(status)s' WHERE volumename='%(vol)s'""" % {'status': s, 'vol': row[0]}
+		glacier.update_db(SQL, 'update')
 
 	else:
 		try:
 			u = glacier.upload_glacier.delay(fname,vault,fname)
-			conn=psycopg2.connect(dbconn)
-			cur = conn.cursor()
 			SQL="""UPDATE media SET comment='{"celery_id": "%(cid)s"}' WHERE volumename='%(vol)s'""" % {'cid': u.id, 'vol': row[0]}
-			cur.execute(SQL)
-			conn.commit()
-			conn.close()	
+			glacier.update_db(SQL, 'update')
 		except:
 			raise

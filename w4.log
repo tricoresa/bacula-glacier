@@ -1,4 +1,4 @@
-[2015-12-11 13:11:50,375: WARNING/MainProcess] /u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/apps/worker.py:161: CDeprecationWarning: 
+[2015-12-18 12:22:17,452: WARNING/MainProcess] /u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/apps/worker.py:161: CDeprecationWarning: 
 Starting from version 3.2 Celery will refuse to accept pickle by default.
 
 The pickle serializer is a security concern as it may give attackers
@@ -17,18 +17,27 @@ You must only enable the serializers that you will actually use.
 
 
   warnings.warn(CDeprecationWarning(W_PICKLE_DEPRECATED))
-[2015-12-11 13:11:50,410: INFO/MainProcess] Connected to amqp://guest:**@127.0.0.1:5672//
-[2015-12-11 13:11:50,436: INFO/MainProcess] mingle: searching for neighbors
-[2015-12-11 13:11:51,464: INFO/MainProcess] mingle: sync with 3 nodes
-[2015-12-11 13:11:51,465: INFO/MainProcess] mingle: sync complete
-[2015-12-11 13:11:51,499: WARNING/MainProcess] w4@ckerns-rhel6.novalocal ready.
-[2015-12-14 20:00:04,273: INFO/MainProcess] Received task: glacier.upload_glacier[8ba64b96-a631-4754-a78b-b73e72052344]
-[2015-12-14 20:00:04,323: INFO/Worker-1] Found credentials in shared credentials file: ~/.aws/credentials
-[2015-12-14 20:00:04,740: INFO/Worker-1] Starting new HTTPS connection (1): glacier.us-east-1.amazonaws.com
-[2015-12-14 20:00:05,388: INFO/MainProcess] Task glacier.upload_glacier[8ba64b96-a631-4754-a78b-b73e72052344] succeeded in 1.07324302295s: {u'archiveId':...
-[2015-12-15 12:19:40,082: INFO/MainProcess] sync with w1@ckerns-rhel6.novalocal
-[2015-12-15 12:27:45,737: INFO/MainProcess] sync with celery@ckerns-rhel6.novalocal
-[2015-12-15 12:29:42,205: WARNING/MainProcess] /u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/apps/worker.py:161: CDeprecationWarning: 
+[2015-12-18 12:22:17,464: INFO/MainProcess] Connected to amqp://guest:**@127.0.0.1:5672//
+[2015-12-18 12:22:17,477: INFO/MainProcess] mingle: searching for neighbors
+[2015-12-18 12:22:18,491: INFO/MainProcess] mingle: sync with 3 nodes
+[2015-12-18 12:22:18,492: INFO/MainProcess] mingle: sync complete
+[2015-12-18 12:22:18,521: WARNING/MainProcess] w4@ckerns-rhel6.novalocal ready.
+[2015-12-18 12:22:20,202: INFO/MainProcess] Events of group {task} enabled by remote.
+[2015-12-18 12:25:33,284: INFO/MainProcess] Received task: glacier.hash_file[59abbfe2-692d-4a3a-8f6d-e65eff56204e]
+[2015-12-18 12:25:36,219: INFO/MainProcess] Task glacier.hash_file[59abbfe2-692d-4a3a-8f6d-e65eff56204e] succeeded in 2.91152111802s: '35ee40034d2f2ee5d5e46c6efc9d62e1d1a0ae0f412baecbddbba6eabccb0a54'
+[2015-12-18 12:27:35,865: INFO/MainProcess] Received task: glacier.hash_file[2de60021-68dc-49de-8de6-ed153e26c9ba]
+[2015-12-18 12:27:35,867: INFO/MainProcess] Received task: glacier.hash_file[dc214b80-35c3-4fef-8ba3-72e96a8c7e16]
+[2015-12-18 12:27:36,020: INFO/MainProcess] Task glacier.hash_file[2de60021-68dc-49de-8de6-ed153e26c9ba] succeeded in 0.150811105035s: 'a0784d98b04e3ae7169d2775bab3dbc1b7ea8fb28780cc8ae9cddcb1868055f0'
+[2015-12-18 12:27:36,126: ERROR/MainProcess] Task glacier.hash_file[dc214b80-35c3-4fef-8ba3-72e96a8c7e16] raised unexpected: MemoryError()
+Traceback (most recent call last):
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/app/trace.py", line 240, in trace_task
+    R = retval = fun(*args, **kwargs)
+  File "/u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/app/trace.py", line 438, in __protected_call__
+    return self.run(*args, **kwargs)
+  File "/u01/bacula-glacier/glacier.py", line 24, in hash_file
+    treehash.update(open(fname, "rb").read())
+MemoryError
+[2015-12-22 15:15:45,806: WARNING/MainProcess] /u01/Djracula/.virtualenvs/bacula-glacier/lib/python2.7/site-packages/celery/apps/worker.py:161: CDeprecationWarning: 
 Starting from version 3.2 Celery will refuse to accept pickle by default.
 
 The pickle serializer is a security concern as it may give attackers
@@ -47,10 +56,4 @@ You must only enable the serializers that you will actually use.
 
 
   warnings.warn(CDeprecationWarning(W_PICKLE_DEPRECATED))
-[2015-12-15 12:29:42,217: INFO/MainProcess] Connected to amqp://guest:**@127.0.0.1:5672//
-[2015-12-15 12:29:42,230: INFO/MainProcess] mingle: searching for neighbors
-[2015-12-15 12:29:43,242: INFO/MainProcess] mingle: sync with 3 nodes
-[2015-12-15 12:29:43,243: INFO/MainProcess] mingle: sync complete
-[2015-12-15 12:29:43,293: WARNING/MainProcess] w4@ckerns-rhel6.novalocal ready.
-[2015-12-15 12:29:53,049: INFO/MainProcess] sync with w5@ckerns-rhel6.novalocal
-[2015-12-15 15:35:53,759: INFO/MainProcess] Events of group {task} enabled by remote.
+[2015-12-22 15:15:46,946: WARNING/MainProcess] w4@ckerns-rhel6.novalocal ready.
