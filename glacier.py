@@ -9,16 +9,21 @@ import hashlib
 app = Celery('tasks', backend='amqp', broker='amqp://guest@localhost')
 app.conf.update( 
     CELERY_ROUTES = { 
-	'bacula-glacier.glacier.upload_glacier': {'queue': 'upload'},
-	'bacula-glacier.glacier.upload_part': {'queue': 'upload'},
-	'bacula-glacier.glacier.hash_file': {'queue': 'hashtree'},
+	'glacier.upload_glacier': {'queue': 'upload'},
+	'glacier.upload_part': {'queue': 'multi_upload'},
+	'glacier.hash_file': {'queue': 'hashtree'},
     },
 )
 
 @app.task
 def hash_file(fname):
         treehash = TreeHash(algo=hashlib.sha256)
-        treehash.update(open(fname, "rb").read())
+	with open(fname, 'rb') as f:
+		while True:
+			buf = f.read(1024 * 1024)
+			if not buf:
+				break	
+			treehash.update(buf)
 	return treehash.hexdigest()
 
 @app.task
@@ -85,4 +90,16 @@ def update_db(SQL, query):
                 return rows
         conn.commit()
         conn.close()
+
+def get_hash():
+        SQL = """SELECT volumename,comment FROM media WHERE comment->>'state'='treehash' AND comment->>'status'='in-progress'"""
+        volumes = glacier.update_db(SQL, 'select')
+        for vol in volumes:
+                r = AsyncResult(vol[1]['celery_id'])
+                if r.ready() == True:
+                        vol[1]['hash'] = r.result
+                        vol[1]['status'] = "complete"
+                        d = json.dumps(vol[1])
+                        SQL = """UPDATE media SET comment='%(data)s' WHERE volumename='%(vol)s'""" % {'data': d, 'vol': vol[0]}
+                        glacier.update_db(SQL,'update')
 

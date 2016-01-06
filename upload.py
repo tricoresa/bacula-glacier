@@ -27,7 +27,7 @@ time = n.strftime('%Y-%m-%d %H:%M:%S')
 
 def submit_hash():
 	try:
-    		v = glacier.get_vols(jobid)
+    		v = glacier.get_vols.delay(jobid)
 	except:
     		print "Failed to get volumes"
     		raise
@@ -37,11 +37,11 @@ def submit_hash():
                 data = {'state': 'treehash', 'status': 'in-progress', 'celery_id': thash.task_id, 'path': fname, 'hash': '', 'failed_parts': '', 'upoad_id': '', 'job_id': '', 'error_id': '', 'date': time}
                 d = json.dumps(data)
                 SQL = """UPDATE media SET comment='%(data)s' where volumename='%(vol)s'""" % {'data': d, 'vol': vol[0]}
-                glacier.update_db(SQL,'update')
+                glacier.update_db.delay(SQL,'update')
 
 def get_hash():
         SQL = """SELECT volumename,comment FROM media WHERE comment->>'state'='treehash' AND comment->>'status'='in-progress'"""
-	volumes = glacier.update_db(SQL, 'select')
+	volumes = glacier.update_db.delay(SQL,'select')
 	for vol in volumes:	
 		r = AsyncResult(vol[1]['celery_id'])
 		if r.ready() == True:
@@ -49,18 +49,19 @@ def get_hash():
 			vol[1]['status'] = "complete"
 			d = json.dumps(vol[1])
                         SQL = """UPDATE media SET comment='%(data)s' WHERE volumename='%(vol)s'""" % {'data': d, 'vol': vol[0]}
-                        glacier.update_db(SQL,'update')
+                        glacier.update_db.delay(SQL,'update')	
 
 
-def upload_volume(fname):
+def upload_volume():
 	SQL = """SELECT volumename,comment FROM media WHERE comment->>'state'='treehash' AND comment->>'status'='complete'"""
-	volumes = glacier.update_db(SQL, 'select')
+	volumes = glacier.update_db.delay(SQL,'select')
 	for vol in volumes:
 		fname = vol[1]['path']
-		if os.stat(fname).st_size > chunksize:
+		fsize = os.stat(fname).st_size
+		if fsize > chunksize:
 			r = 0
 			try:
-				init_multi = glacier.upload_multi_init(fname,vault,str(chunksize))
+				init_multi = glacier.upload_multi_init.delay(fname,vault,str(chunksize))
 			except:
 				raise
 			p = 1
@@ -74,7 +75,7 @@ def upload_volume(fname):
 					else:
 						incr = chunksize
 					try:
-						up = glacier.upload_part(vault,init_multi,"bytes " + str(r) + "-" + str(str(r + int(incr) -1)) + "/*",body=chunk)
+						up = glacier.upload_part.delay(vault,init_multi,"bytes " + str(r) + "-" + str(str(r + int(incr) -1)) + "/*",body=chunk)
 					except:
 						raise
 
@@ -84,7 +85,7 @@ def upload_volume(fname):
 						status['failures'][part] = '%(start)s-%(end)s' % {'start': r, 'end': r+incr}
 				
 			try:
-				com = glacier.complete_multi(vault,init_multi,str(fsize))# complete multipart upload
+				com = glacier.complete_multi.delay(vault,init_multi,str(fsize))# complete multipart upload
 				if com['ResponseMetadata']['HTTPStatusCode'] == 201:
 					status['glacier_data'] = {'archiveId': com['archiveId'], 'checksum': com['checksum']}
 			except:
@@ -92,13 +93,13 @@ def upload_volume(fname):
 
 			s =  json.dumps(status)
 			SQL = """UPDATE media SET comment='%(status)s' WHERE volumename='%(vol)s'""" % {'status': s, 'vol': row[0]}
-			glacier.update_db(SQL, 'update')
+			glacier.update_db.delay(SQL, 'update')
 
 		else:
 			try:
 				u = glacier.upload_glacier.delay(fname,vault,fname)
 				SQL="""UPDATE media SET comment='{"celery_id": "%(cid)s"}' WHERE volumename='%(vol)s'""" % {'cid': u.id, 'vol': row[0]}
-				glacier.update_db(SQL, 'update')
+				glacier.update_db.delay(SQL, 'update')
 			except:
 				raise
 
@@ -108,7 +109,7 @@ if command == 'submit':
 elif command == 'get':
     get_hash()
 elif command == 'upload':
-    upload_file(fname)     
+    upload_volume()     
 else:
     print("Should be either submit or get")
 

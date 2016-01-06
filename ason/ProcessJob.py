@@ -5,6 +5,9 @@ import argparse
 import json
 import StringIO
 import sys
+import math
+import hashlib
+from treehash import TreeHash
 
 
 # Constants
@@ -14,20 +17,80 @@ HTTP_SUCCESS_HIGH = 226
 DEFAULT_ACCOUNT_ID = "-"
 DEFAULT_CHUNK_SIZE = 1024 ** 3
 DEFAULT_OUTPUT_PATH = "."
+DEFAULT_HASH_CHUNK_SIZE = 1024 ** 2
 
 
 # Global Variables
 
 Debug = False
 
-# Main loop
+
+def next_power_of_2(num):
+    return int(pow(2, round(math.log(num)/math.log(2))))
+
+def is_power_of_2(num):
+    return num != 0 and ((num & (num - 1)) == 0)
+
+
+def running_treehash_on_file_range(treehash, filename, start, end, hash_chunk_size=DEFAULT_HASH_CHUNK_SIZE):
+
+    infile = open(filename, "rb")
+
+    infile.seek(start)
+    current_pos = start
+    while current_pos < end:
+        read_size = end - current_pos
+        if read_size > hash_chunk_size:
+            read_size = hash_chunk_size
+        if Debug:
+            print("Reading from " + str(current_pos) + " to " + str(current_pos + read_size - 1))
+        treehash.update(infile.read(read_size))
+        if Debug:
+            print("Current treehash for  " + str(current_pos) + " to " + str(current_pos + read_size - 1) + " is " + treehash.hexdigest())
+        current_pos += read_size
+    infile.close()
+    if Debug:
+        print("TreeHash for this section (" + str(start) + " to " + str(end) + ") is " + treehash.hexdigest())
+
+def sha256_on_file_range(filename, start, end, hash_chunk_size=DEFAULT_HASH_CHUNK_SIZE):
+
+    sha256 = hashlib.sha256()
+    infile = open(filename, "rb")
+
+    if Debug:
+        outfile = open(filename + ".debug", "wb")
+
+    infile.seek(start)
+    current_pos = start
+    read_count = 1
+    while current_pos < end:
+        read_size = end - current_pos
+        if read_size > hash_chunk_size:
+            read_size = hash_chunk_size
+        if Debug:
+            print("Reading (" + str(read_count) + ") from " + str(current_pos) + " to " + str(current_pos + read_size - 1))
+        if Debug:
+            chunk = infile.read(read_size)
+            sha256.update(chunk)
+            outfile.write(chunk)
+        else:
+            sha256.update(infile.read(read_size))
+        current_pos += read_size
+        read_count += 1
+    infile.close()
+    if Debug:
+        outfile.close()
+    return sha256.hexdigest()
+
 
 def process_archive_retrieval_job(job,chunk_size,output_path):
     filepos_limit = job.archive_size_in_bytes - 1
     current_pos = 0
     job_archive_hash = job.archive_sha256_tree_hash
     chunk_count = 0
-    archive_file = open(output_path + "/" + job.id + ".archive", "wb")
+    archive_file_name = output_path + "/" + job.id + ".archive"
+    archive_file = open(archive_file_name, "wb")
+    treehash = TreeHash(algo=hashlib.sha256)
     while current_pos < filepos_limit:
         end_pos = current_pos + (chunk_size - 1)
         if end_pos > filepos_limit:
@@ -50,6 +113,12 @@ def process_archive_retrieval_job(job,chunk_size,output_path):
                 print("Writing chunk " + str(chunk_count) + " " + range_string + " Checksum: " + response['checksum'])
 
             archive_file.write(response['body'].read())
+            section_hash = sha256_on_file_range(archive_file_name, current_pos, end_pos+1)
+            running_treehash_on_file_range(treehash, archive_file_name, current_pos, end_pos+1)
+            if Debug:
+                print("Local checksum of chunk " + str(chunk_count) + ": " + section_hash)
+                print("Current running treehash is  " + treehash.hexdigest())
+            
             current_pos = end_pos + 1
         else:
             print("Response unsuccessful. Retrying")
@@ -103,7 +172,14 @@ def process_job(job,chunk_size,output_path):
         print("Fatal error, job status is " + job.status_code + ". Exiting.")
         sys.exit(1)
 
+
+
+# Main loop
+
 def main():
+
+    global Debug
+
     # Parse command line options
     parser = argparse.ArgumentParser()
     parser.add_argument("--account", help="Account ID", default=DEFAULT_ACCOUNT_ID)
@@ -115,6 +191,12 @@ def main():
     args = parser.parse_args()
 
     Debug = args.debug
+    chunksize = int(args.chunksize)
+
+    if not is_power_of_2(chunksize):
+        print("Chunksize " + str(chunksize) + " is not a power of two. The next closest power of two is " + str(next_power_of_2(chunksize)))
+        print("Exiting.")
+        sys.exit(1)
 
     client = boto3.client('glacier')
     glacier = boto3.resource('glacier')
@@ -134,14 +216,14 @@ def main():
                 vault_name=args.vault,
                 id=jobitem['JobId']
             )
-            process_job(job, args.chunksize, args.outputpath)
+            process_job(job, chunksize, args.outputpath)
     else:
         job = glacier.Job(
             account_id=args.account, 
             vault_name=args.vault, 
             id=args.jobid
         )
-        process_job(job, args.chunksize, args.outputpath)
+        process_job(job, chunksize, args.outputpath)
 
 
 
