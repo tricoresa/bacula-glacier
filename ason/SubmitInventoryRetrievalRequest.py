@@ -9,7 +9,7 @@ import argparse
 def main():
     # Parse command line options
     parser = argparse.ArgumentParser()
-    parser.add_argument("--account", help="Account ID", required=True)
+    parser.add_argument("--account", help="Account ID", default="-")
     parser.add_argument("--vault", help="Vault Name", required=True)
     args = parser.parse_args()
 
