@@ -6,15 +6,22 @@ from celery import Celery
 from treehash import TreeHash
 import hashlib
 
-app = Celery('tasks', backend='amqp', broker='amqp://guest@localhost')
-app.conf.update( 
-    CELERY_ROUTES = { 
-	'glacier.upload_glacier': {'queue': 'upload'},
-	'glacier.upload_part': {'queue': 'multi_upload'},
-	'glacier.hash_file': {'queue': 'hashtree'},
-    },
-)
 
+# Constants
+
+HTTP_SUCCESS_LOW = 200
+HTTP_SUCCESS_HIGH = 226
+
+app = Celery('glacier', backend='amqp', broker='amqp://guest@localhost')
+#app.conf.update( 
+#    CELERY_ROUTES = { 
+#	'glacier.upload_glacier': {'queue': 'upload'},
+#	'glacier.upload_part': {'queue': 'multi_upload'},
+#	'glacier.hash_file': {'queue': 'hashtree'},
+#    },
+#)
+
+app.control.rate_limit('glacier.upload_part', '1/h')
 @app.task
 def hash_file(fname):
         treehash = TreeHash(algo=hashlib.sha256)
@@ -41,7 +48,6 @@ def get_vols(jobid):
 	return rows	
 		
 
-
 @app.task
 def upload_glacier(filename, vault, description):
 	glacier_conn = boto3.client('glacier')
@@ -57,6 +63,45 @@ def upload_multi_init(filename, vault, chunksize):
 	except:
 		raise
 	return r['uploadId']
+
+@app.task
+def upload_multi_exec(fname, fsize, vault, uid, chunksize):
+        g = boto3.client('glacier')
+        p = 1
+
+        try:
+                with open (fname, 'rb') as f:
+                        r = 0
+			failed_parts = {}
+                        for chunk in iter(lambda: f.read(chunksize), b''):
+                                part = "part_"+str(p)
+
+                                if r + chunksize > fsize:
+                                        incr = fsize -r
+                                else:
+                                        incr = chunksize
+
+                                part_range = "bytes " + str(r) + "-" + str(str(r + int(incr) -1)) + "/*"
+        			g = boto3.client('glacier')
+                                try:
+					response = g.upload_multipart_part(vaultName=vault,uploadId=uid,range=part_range,body=chunk)
+				except:
+					failed_parts[part] = str(str(r + int(incr) -1))	
+					pass
+				g = None
+	
+                                #if not HTTP_SUCCESS_LOW <= response['status'] <= HTTP_SUCCESS_HIGH:
+                                #        success = False
+
+                                r = r + chunksize
+                                p = p + 1
+
+        except:
+		failed_parts = 'all'
+		
+	return failed_parts
+
+
 
 @app.task
 def upload_part(vault,uid,range,body):

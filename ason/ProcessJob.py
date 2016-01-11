@@ -17,12 +17,14 @@ HTTP_SUCCESS_HIGH = 226
 DEFAULT_ACCOUNT_ID = "-"
 DEFAULT_CHUNK_SIZE = 1024 ** 3
 DEFAULT_OUTPUT_PATH = "."
-DEFAULT_HASH_CHUNK_SIZE = 1024 ** 2
+DEFAULT_HASH_CHUNK_SIZE = 512 ** 2
 
 
 # Global Variables
 
 Debug = False
+
+chunk_count = 0
 
 
 def next_power_of_2(num):
@@ -36,21 +38,32 @@ def running_treehash_on_file_range(treehash, filename, start, end, hash_chunk_si
 
     infile = open(filename, "rb")
 
+    if Debug:
+        outfile = open(filename + ".treehash.debug", "wb")
+
     infile.seek(start)
+
+    print("Treehash: Start: " + str(start) + ", End: " + str(end))
     current_pos = start
     while current_pos < end:
         read_size = end - current_pos
         if read_size > hash_chunk_size:
             read_size = hash_chunk_size
         if Debug:
-            print("Reading from " + str(current_pos) + " to " + str(current_pos + read_size - 1))
-        treehash.update(infile.read(read_size))
+            print("Reading from " + str(current_pos) + " to " + str(current_pos + read_size - 1) + ", Readsize: " + str(read_size))
+        if Debug:
+            chunk = infile.read(read_size)
+            treehash.update(chunk)
+            outfile.write(chunk)
+        else:
+            treehash.update(infile.read(read_size))
         if Debug:
             print("Current treehash for  " + str(current_pos) + " to " + str(current_pos + read_size - 1) + " is " + treehash.hexdigest())
         current_pos += read_size
     infile.close()
     if Debug:
         print("TreeHash for this section (" + str(start) + " to " + str(end) + ") is " + treehash.hexdigest())
+        outfile.close()
 
 def sha256_on_file_range(filename, start, end, hash_chunk_size=DEFAULT_HASH_CHUNK_SIZE):
 
@@ -84,6 +97,8 @@ def sha256_on_file_range(filename, start, end, hash_chunk_size=DEFAULT_HASH_CHUN
 
 
 def process_archive_retrieval_job(job,chunk_size,output_path):
+    global chunk_count 
+
     filepos_limit = job.archive_size_in_bytes - 1
     current_pos = 0
     job_archive_hash = job.archive_sha256_tree_hash
@@ -112,9 +127,19 @@ def process_archive_retrieval_job(job,chunk_size,output_path):
                 #print("Writing chunk " + str(chunk_count) + " " + range_string + " Checksum: " + response['checksum'] + " ContentRange: " + response['contentRange'] + " AcceptRanges: " + response['acceptRanges'] + " ContentType: " + response['contentType'] + " ArchiveDescription: " + response['archiveDescription'])
                 print("Writing chunk " + str(chunk_count) + " " + range_string + " Checksum: " + response['checksum'])
 
-            archive_file.write(response['body'].read())
-            section_hash = sha256_on_file_range(archive_file_name, current_pos, end_pos+1)
-            running_treehash_on_file_range(treehash, archive_file_name, current_pos, end_pos+1)
+            #archive_file.write(response['body'].read())
+            chunk_bytes=response['body'].read()
+            archive_file.write(chunk_bytes)
+
+            if Debug:
+                chunk_file = open(archive_file_name + ".chunk." + str(chunk_count), "wb")
+                chunk_file.write(chunk_bytes)
+                chunk_file.close
+
+            #section_hash = sha256_on_file_range(archive_file_name, current_pos, end_pos+1)
+            section_hash = sha256_on_file_range(archive_file_name, current_pos, end_pos)
+            running_treehash_on_file_range(treehash, archive_file_name, current_pos, end_pos)
+
             if Debug:
                 print("Local checksum of chunk " + str(chunk_count) + ": " + section_hash)
                 print("Current running treehash is  " + treehash.hexdigest())
