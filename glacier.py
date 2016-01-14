@@ -24,7 +24,7 @@ app = Celery('glacier', backend='amqp', broker='amqp://guest@localhost')
 app.control.rate_limit('glacier.upload_part', '1/h')
 @app.task
 def hash_file(fname):
-	treehash = TreeHash(algo=hashlib.sha256)
+    treehash = TreeHash(algo=hashlib.sha256)
     with open(fname, 'rb') as f:
         while True:
             buf = f.read(1024 * 1024)
@@ -54,6 +54,7 @@ def upload_glacier(filename, vault, description):
     with open(filename, 'rb') as f:
         upload_arc = glacier_conn.upload_archive(vaultName=vault, archiveDescription=description, body=f)
     return upload_arc
+    glacier_conn = None
 
 @app.task
 def upload_multi_init(filename, vault, chunksize):
@@ -63,12 +64,11 @@ def upload_multi_init(filename, vault, chunksize):
     except:
         raise
     return r['uploadId']
+    g = None
 
 @app.task
 def upload_multi_exec(fname, fsize, vault, uid, chunksize):
-    g = boto3.client('glacier')
     p = 1
-
     try:
         with open (fname, 'rb') as f:
             r = 0
@@ -80,19 +80,19 @@ def upload_multi_exec(fname, fsize, vault, uid, chunksize):
                 else:
                     incr = chunksize
                     part_range = "bytes " + str(r) + "-" + str(str(r + int(incr) -1)) + "/*"
-                    g = boto3.client('glacier')
                 try:
+                    g = boto3.client('glacier')
                     response = g.upload_multipart_part(vaultName=vault,uploadId=uid,range=part_range,body=chunk)
+                    g = None
                 except:
-                    failed_parts[part] = str(str(r + int(incr) -1))
+                    failed_parts[part] = str(r) + "-" + str(str(r + int(incr) -1))
                     pass
-                g = None
 
                                 #if not HTTP_SUCCESS_LOW <= response['status'] <= HTTP_SUCCESS_HIGH:
                                 #        success = False
 
-                                r = r + chunksize
-                                p = p + 1
+                r = r + chunksize
+                p = p + 1
 
     except:
         failed_parts = 'all'
@@ -101,14 +101,14 @@ def upload_multi_exec(fname, fsize, vault, uid, chunksize):
 
 
 
-@app.task
-def upload_part(vault,uid,range,body):
-    g = boto3.client('glacier')
-    try:
-        r = g.upload_multipart_part(vaultName=vault,uploadId=uid,range=range,body=body)
-    except:
-        raise
-    return r
+#@app.task
+#def upload_part(vault,uid,range,body):
+#    g = boto3.client('glacier')
+#    try:
+#        r = g.upload_multipart_part(vaultName=vault,uploadId=uid,range=range,body=body)
+#    except:
+#        raise
+#    return r
 
 @app.task
 def complete_multi(vault,uid,size,check):
@@ -119,20 +119,20 @@ def complete_multi(vault,uid,size,check):
         raise
     return r
 
-@app.task
-def update_db(SQL, query):
-    dbconn = "dbname='bacula' user='bacula' password='bacula' host='localhost'"
-    conn=psycopg2.connect(dbconn)
-    cur = conn.cursor()
-    try:
-        cur.execute(SQL)
-    except:
-        raise
-    if query == 'select':
-        rows = cur.fetchall()
-        return rows
-    conn.commit()
-    conn.close()
+#@app.task
+#def update_db(SQL, query):
+#    dbconn = "dbname='bacula' user='bacula' password='bacula' host='localhost'"
+#    conn=psycopg2.connect(dbconn)
+#    cur = conn.cursor()
+#    try:
+#        cur.execute(SQL)
+#    except:
+#        raise
+#    if query == 'select':
+#        rows = cur.fetchall()
+#        return rows
+#    conn.commit()
+#    conn.close()
 
 def get_hash():
         SQL = """SELECT volumename,comment FROM media WHERE comment->>'state'='treehash' AND comment->>'status'='in-progress'"""
@@ -147,17 +147,64 @@ def get_hash():
                         glacier.update_db(SQL,'update')
 
 
-Class db_data():
-    def __init__():
-        dbconn = "dbname='bacula' user='bacula' password='bacula' host='localhost'"
-        conn=psycopg2.connect(dbconn)
-        cur = conn.cursor()
+class db_data:
+    dbconn = "dbname='bacula' user='bacula' password='bacula' host='localhost'"
+    conn=psycopg2.connect(dbconn)
+    cur = conn.cursor()
+ 
+    def job_vols(self, jobid):
+        SQL = """SELECT volumename from media where mediaid in (select mediaid from jobmedia where jobid=%(job)s)""" % {'job':jobid}        
+        self.cur.execute(SQL)
+        rows = self.cur.fetchall()
+        return rows        
 
-    def select(columns,table,clause):
-        SQL = """SELECT %(columns)s from %(table)s where %(condition)s""" % {'columns': columns, 'table': table, 'condition':clause}
-        cur.execute(SQL)
-        rows = cur.fetchall()
+    def get_vol_hash(self):
+        SQL="""SELECT volumename,comment FROM media WHERE comment->>'state'='treehash' AND comment->>'status'='in-progress'"""
+        self.cur.execute(SQL)
+        rows = self.cur.fetchall()
         return rows
 
-    def update_comment(data,volume):
+    def get_upload_vols(self):
+        SQL = """SELECT  volumename,comment FROM media WHERE comment->>'state'='treehash' AND comment->>'status'='complete'"""
+        self.cur.execute(SQL)
+        rows = self.cur.fetchall()
+        return rows
+
+
+    def get_single_uploads(self):
+        SQL = """SELECT volumename,comment FROM media WHERE comment->>'state'='single-upload' AND comment->>'status'='in-progress'"""
+        self.cur.execute(SQL)
+        rows = self.cur.fetchall()
+        return rows
+
+    def get_multi_uploads(self):
+        SQL = """SELECT volumename,comment FROM media WHERE comment->>'state'='multi-upload' AND comment->>'status'='in-progress'"""
+        self.cur.execute(SQL)
+        rows = self.cur.fetchall()
+        return rows
+
+    def update_comment(self,data,volume):
         SQL = """UPDATE media SET comment='%(data)s' where volumename='%(vol)s'""" % {'data': data, 'vol': volume}
+        try:
+            self.cur.execute(SQL)
+        except: 
+            return 'comment update failed'
+        self.conn.commit()
+
+    def get_completed_volumes(self):
+        SQL="""SELECT mediaid,comment,volumename FROM media WHERE comment->>'state'='multi-upload' AND comment->>'status'='complete' OR (comment->>'state'='single-upload' AND comment->>'status'='complete')"""
+        try:
+            self.cur.execute(SQL)
+        except:
+            return 'failed'
+        rows = self.cur.fetchall()
+        return rows
+
+    def select_volumes(self,clause):
+        SQL="""SELECT mediaid,comment,volumename FROM media WHERE {0}""".format(clause)
+        try:
+            self.cur.execute(SQL)
+        except:
+            return 'failed'
+        rows = self.cur.fetchall()
+        return rows
