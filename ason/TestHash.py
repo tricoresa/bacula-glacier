@@ -1,6 +1,6 @@
 #!/bin/env python
 
-import ProcessJob
+import ProcessJob_old
 import argparse
 import os
 import sys
@@ -25,12 +25,12 @@ def main():
     args = parser.parse_args()
 
     Debug = args.debug
-    ProcessJob.set_debug(Debug)
+    ProcessJob_old.set_debug(Debug)
     chunksize = int(args.chunksize)
     statinfo = os.stat(args.file)
 
-    if not ProcessJob.is_power_of_2(chunksize):
-        print("Chunksize " + str(chunksize) + " is not a power of two. The next closest power of two is " + str(ProcessJob.next_power_of_2(chunksize)))
+    if not ProcessJob_old.is_power_of_2(chunksize):
+        print("Chunksize " + str(chunksize) + " is not a power of two. The next closest power of two is " + str(ProcessJob_old.next_power_of_2(chunksize)))
         print("Exiting.")
         sys.exit(1)
 
@@ -49,8 +49,8 @@ def main():
             end_pos = statinfo.st_size
         if Debug:
             print("Processing chunk " + str(chunk_count) + " range " + str(current_pos) + " to " + str(end_pos) )
-        section_hash = ProcessJob.sha256_on_file_range(args.file, current_pos, end_pos)
-        ProcessJob.running_treehash_on_file_range(treehash, args.file, current_pos, end_pos)
+        section_hash = ProcessJob_old.sha256_on_file_range(args.file, current_pos, end_pos)
+        ProcessJob_old.running_treehash_on_file_range(treehash, args.file, current_pos, end_pos)
 
         print("Range: " + str(current_pos) + " to " + str(end_pos))
         print("Local checksum of chunk " + str(chunk_count) + ": " + section_hash)
