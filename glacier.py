@@ -5,12 +5,16 @@ import psycopg2
 from celery import Celery
 from treehash import TreeHash
 import hashlib
+import math
+import os
 
 
 # Constants
 
 HTTP_SUCCESS_LOW = 200
 HTTP_SUCCESS_HIGH = 226
+DEFAULT_HASH_CHUNK_SIZE = pow(1024, 2)
+
 
 app = Celery('glacier', backend='amqp', broker='amqp://guest@localhost')
 #app.conf.update( 
@@ -79,27 +83,39 @@ def upload_multi_exec(fname, fsize, vault, uid, chunksize):
                     incr = fsize -r
                 else:
                     incr = chunksize
-                    part_range = "bytes " + str(r) + "-" + str(str(r + int(incr) -1)) + "/*"
+                part_range = "bytes " + str(r) + "-" + str(str(r + int(incr) -1)) + "/*"
                 try:
                     g = boto3.client('glacier')
                     response = g.upload_multipart_part(vaultName=vault,uploadId=uid,range=part_range,body=chunk)
                     g = None
                 except:
-                    failed_parts[part] = str(r) + "-" + str(str(r + int(incr) -1))
+                    failed_parts[part] = part_range
                     pass
-
-                                #if not HTTP_SUCCESS_LOW <= response['status'] <= HTTP_SUCCESS_HIGH:
-                                #        success = False
 
                 r = r + chunksize
                 p = p + 1
 
     except:
-        failed_parts = 'all'
+        failed_parts = 'failed'
 
     return failed_parts
 
-
+@app.task
+def upload_failed_parts(fname,vault,uid,part_range,chunksize):
+    try:
+        with open(fname, 'rb') as f:
+            p = part_range.split('-')
+            part_range = "bytes " + part_range
+            start = int(p[0])
+            f.seek(start)
+            body = f.read(chunksize) 
+            g = boto3.client('glacier')
+            response = g.upload_multipart_part(vaultName=vault,uploadId=uid,range=part_range,body=body)
+            g = None
+    except:
+        raise
+    return response
+    
 
 #@app.task
 #def upload_part(vault,uid,range,body):
@@ -147,6 +163,269 @@ def get_hash():
                         glacier.update_db(SQL,'update')
 
 
+# convenience functions for boundary sanity checks
+def next_power_of_2(num):
+    return int(pow(2, round(math.log(num)/math.log(2))))
+
+def is_power_of_2(num):
+    return num != 0 and ((num & (num - 1)) == 0)
+
+def response_success(response):
+    if 'status' in response:
+        status_code = response['status']
+    elif 'ResponseMetadata' in response:
+        status_code = response['ResponseMetadata']['HTTPStatusCode']
+    else:
+        status_code = -1
+
+    return (HTTP_SUCCESS_LOW <= status_code <= HTTP_SUCCESS_HIGH)
+
+def treehash_on_file_range(treehash, filename, start, end, hash_chunk_size=DEFAULT_HASH_CHUNK_SIZE):
+
+    treehash_local = TreeHash(algo=hashlib.sha256)
+
+    try:
+        infile = open(filename, "rb")
+        infile.seek(start)
+
+        current_pos = start
+        end += 1
+        while current_pos < end:
+            read_size = end - current_pos
+            if read_size > hash_chunk_size:
+                read_size = hash_chunk_size
+
+            chunk = infile.read(read_size)
+            if treehash:
+                treehash.update(chunk)
+            treehash_local.update(chunk)
+
+            current_pos += read_size
+        infile.close()
+
+    except:
+        raise
+
+    return treehash_local.hexdigest()
+
+
+@app.task
+def submit_request(type, vault, archiveid=""):
+    client = boto3.client('glacier')
+
+    result = "failed"
+    params = None
+    try:
+        if type.lower() == "inventory":
+            params={
+                "Format": "JSON",
+                "Type": "inventory-retrieval"
+            }
+        elif (type.lower() == "archive") and archiveid:
+            params={
+                "Type": "archive-retrieval",
+                "ArchiveId": archiveid
+            }
+
+        if params:
+            response = client.initiate_job(
+                vaultName=vault,
+                jobParameters=params
+            )
+
+            if response_success(response):
+                result = response['jobId']
+
+    except:
+        raise
+
+    return result
+
+def process_archive_retrieval_range(job,output_path,start,end,friendly_name,treehash=None):
+
+    range_string = "bytes=" + str(start) + "-" + str(end)
+
+    try:
+        response = job.get_output(
+            range=range_string)
+
+        if response_success(response):
+
+            if friendly_name:
+                filename = output_path + "/" + os.path.basename(response['archiveDescription'])
+            else:
+                filename = output_path + "/" + job.id + ".archive"
+
+            if os.path.exists(filename):
+                statinfo = os.stat(filename)
+                if(start > statinfo.st_size):
+                    # chunk range is beyond end of file
+                    return False
+                else:
+                    archive_file = open(filename, "r+b")
+            else:
+                archive_file = open(filename, "wb")
+
+            archive_file.seek(start)
+            archive_file.write(response['body'].read())
+            archive_file.close()
+            section_hash = treehash_on_file_range(treehash, filename, start, end)
+
+            if section_hash != response['checksum']:
+                # Failed checksum
+                return False
+
+        else:
+            return False
+    except:
+        raise
+
+    return True
+
+
+def process_archive_retrieval_job(job,chunk_size,output_path,friendly_name=False):
+    global chunk_count
+
+    filepos_limit = job.archive_size_in_bytes - 1
+    pad_length = len(str(job.archive_size_in_bytes // chunk_size)) + 1
+    current_pos = 0
+    job_archive_hash = job.archive_sha256_tree_hash
+    chunk_count = 0
+    failed_parts = {}
+    running_treehash = TreeHash(algo=hashlib.sha256)
+    try:
+        while current_pos < filepos_limit:
+            chunk_count += 1
+            end_pos = current_pos + (chunk_size - 1)
+            if end_pos > filepos_limit:
+                end_pos = filepos_limit
+
+            if not process_archive_retrieval_range(job, output_path, current_pos, end_pos, friendly_name, running_treehash):
+                failed_parts["part_" + str(chunk_count).zfill(pad_length)]=[current_pos, end_pos]
+            current_pos = end_pos + 1
+
+        if (not failed_parts) and (running_treehash.hexdigest() != job.archive_sha256_tree_hash):
+            failed_parts = None
+            failed_parts["all"] = True
+    except:
+        failed_parts["all"] = True
+        raise
+
+    return failed_parts
+
+
+def process_inventory_retrieval_job(job,output_path,friendly_name=False):
+
+    failed_parts = {}
+
+    try:
+        response = job.get_output()
+        if response_success(response):
+            if friendly_name:
+                output_name = "Inventory_completed_" + job.completion_date + ".json"
+            else:
+                output_name = job.id + ".inventory.json"
+            inventory_file = open(output_path + "/" + output_name, "wb")
+            inventory_file.write(response['body'].read())
+            inventory_file.close
+        else:
+            failed_parts["all"] = True
+    except:
+        failed_parts["all"] = True 
+        raise
+
+    return failed_parts
+
+@app.task
+def process_failed_job(vault, jobid, archive_file, failed_list, accountid="-"):
+    try:
+        glacier = boto3.resource('glacier')
+
+        job = glacier.Job(
+            account_id=accountid,
+            vault_name=vault,
+            id=jobid
+        )
+
+        new_failed_list = {}
+        for part in sorted(failed_list):
+           if not process_archive_retrieval_range(job, archive_file, failed_list[part][0], failed_list[part][1],False):
+               new_failed_list[part]=[failed_list[part][0], failed_list[part][1]]
+
+        if (not new_failed_list) and (hash_file(archive_file) != job.archive_sha256_tree_hash):
+            new_failed_list = None
+            new_failed_list["all"] = True
+    except:
+        new_failed_list["all"] = True
+        raise
+    return new_failed_list
+
+
+@app.task
+def process_job(job,chunk_size,output_path,friendly_name=False):
+    try:
+        job.load()
+
+        failed_parts = {}
+        if job.status_code == "Succeeded":
+            if job.action == "InventoryRetrieval":
+                failed_parts = process_inventory_retrieval_job(job,output_path,friendly_name)
+            else:
+                failed_parts = process_archive_retrieval_job(job,chunk_size,output_path,friendly_name)
+        else:
+            failed_parts["all"] = True
+    except:
+        raise
+
+    return failed_parts
+
+
+
+@app.task
+def process_request(vault, jobid, chunksize, outputpath, friendlyname=False, accountid="-"):
+
+    
+    failed_collection = {}
+    try:
+        client = boto3.client('glacier')
+        glacier = boto3.resource('glacier')
+    
+        if (jobid.lower() == "any") or (jobid.lower() == "inventory") or (jobid.lower() == "archive"):
+            response = client.list_jobs(
+                vaultName=vault,
+                statuscode="Succeeded"
+            )
+
+            if response_success(response):
+                for jobitem in response['JobList']:
+                    job = glacier.Job(
+                        account_id=accountid,
+                        vault_name=vault,
+                        id=jobitem['JobId']
+                    )
+                    job.load()
+
+                    if (jobid.lower() == "inventory") and (job.action == "InventoryRetrieval"):
+                        failed_collection[job.id] = process_job(job, chunksize, outputpath, friendlyname)
+                    elif (jobid.lower() == "archive") and (job.action == "ArchiveRetrieval"):
+                        failed_collection[job.id] = process_job(job, chunksize, outputpath, friendlyname)
+                    elif (jobid.lower() == "any"):
+                        failed_collection[job.id] = process_job(job, chunksize, outputpath, friendlyname)
+            else:
+                failed_collection["all"] = True
+        else:
+            job = glacier.Job(
+                account_id=accountid,
+                vault_name=vault,
+                id=jobid
+            )
+            job.load()
+            failed_collection[job.id] = process_job(job, chunksize, outputpath, friendlyname)
+    except:
+        raise
+
+    return failed_collection
+
 class db_data:
     dbconn = "dbname='bacula' user='bacula' password='bacula' host='localhost'"
     conn=psycopg2.connect(dbconn)
@@ -193,6 +472,15 @@ class db_data:
 
     def get_completed_volumes(self):
         SQL="""SELECT mediaid,comment,volumename FROM media WHERE comment->>'state'='multi-upload' AND comment->>'status'='complete' OR (comment->>'state'='single-upload' AND comment->>'status'='complete')"""
+        try:
+            self.cur.execute(SQL)
+        except:
+            return 'failed'
+        rows = self.cur.fetchall()
+        return rows
+
+    def get_purged_volumes(self):
+        SQL="""SELECT mediaid,comment,volumename FROM media WHERE comment->>'state'='cleanedup' AND comment->>'status'='complete' AND volstatus like '%Purged%';"""
         try:
             self.cur.execute(SQL)
         except:
